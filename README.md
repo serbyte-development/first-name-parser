@@ -18,10 +18,8 @@ getFirstName("Mary-Jane Smith");          // "Mary-Jane"
 
 ## Install
 
-Until an npm package is published, install directly from GitHub:
-
 ```sh
-npm install github:Serbyte-Development/first-name-parser
+npm install first-name-parser
 ```
 
 ## Why this parser exists

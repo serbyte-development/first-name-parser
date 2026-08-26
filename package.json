@@ -31,7 +31,7 @@
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test && npm run build",
-    "prepare": "npm run build"
+    "prepack": "npm run build"
   },
   "keywords": [
     "first-name",
