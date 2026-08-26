@@ -1,0 +1,53 @@
+{
+  "name": "first-name-parser",
+  "version": "0.1.0",
+  "description": "Best-effort first-name extraction from US full-name form fields.",
+  "license": "MIT",
+  "author": "Serbyte Development",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Serbyte-Development/first-name-parser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Serbyte-Development/first-name-parser/issues"
+  },
+  "homepage": "https://github.com/Serbyte-Development/first-name-parser#readme",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test && npm run build",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "first-name",
+    "name-parser",
+    "full-name",
+    "typescript",
+    "javascript",
+    "forms"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "tsup": "^8.5.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
