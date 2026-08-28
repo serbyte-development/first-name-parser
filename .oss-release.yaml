@@ -1,0 +1,11 @@
+version: 1
+repository: Serbyte-Development/first-name-parser
+branch: main
+targets:
+  - github
+  - npm
+github:
+  tagPrefix: v
+  assets: []
+npm:
+  packageDir: .
