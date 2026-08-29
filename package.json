@@ -27,11 +27,10 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "build": "tsup src/index.ts --tsconfig tsconfig.build.json --format esm,cjs --dts --clean",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "typecheck:benchmarks": "tsc -p benchmarks/tsconfig.json",
-    "check": "npm run typecheck && npm run typecheck:benchmarks && npm test && npm run build",
+    "check": "npm run typecheck && npm test && npm run build",
     "benchmark:probablepeople": "tsx benchmarks/public/eval-probablepeople.ts",
     "benchmark:census": "tsx benchmarks/public/eval-census-vocabulary.ts",
     "benchmark:census:generated": "tsx benchmarks/public/eval-census-generated.ts",

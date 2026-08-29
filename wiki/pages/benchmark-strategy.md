@@ -22,6 +22,8 @@ The product target is a safe customer-follow-up greeting name. Public labeled co
 - Generated US Census forms: 804,225 inputs from 2020 Census first/last-name vocabularies rendered into 15 common US form shapes. The lost generator was reconstructed and fingerprint-matched against historical parser commit `729c145`, reproducing the published 99.9669% exact / 99.9918% weighted figures when rounded. Useful for large-vocabulary regression and collision detection.
 - `probablepeople` labeled corpus: 2,352 noisier records with unconventional order, punctuation, households, and credentials. Useful as an adversarial check.
 
+The Census vocabulary is valuable, but the generated form shapes are not a behavioral model of website users. In particular, synthetic `Family, Given` cases resemble database, directory, and administrative listing formats more than normal self-entry into a `Full Name` field. A user typing their own name into a web form is expected to overwhelmingly use natural given-first order. Therefore Census-generated listing-order greeting scores must not override evidence from real form submissions or force `getFirstName()` to confidently accept comma-flipped input.
+
 Durable public benchmark assets live under `benchmarks/public/`. Run `npm run benchmark:public` for probablepeople, the saved six-shape Census vocabulary sweep, and the fingerprint-matched reconstructed 804,225-case Census generator. The original generator source file is still unavailable, so preserve the reconstruction provenance instead of presenting it as the recovered original.
 
 Published benchmark figures in README/BENCHMARKS describe `parseFirstName().firstName` candidate extraction, not the stricter `getFirstName()` greeting-safe helper. They are separate from `npm test`; rerun the relevant benchmark command before updating them.
@@ -39,6 +41,8 @@ The local ignored `benchmarks/private/` directory stores the corpus, corpus hash
 ## Durable design findings
 
 - A comma alone cannot mean family-first because `First Last, Jr.` is common.
+- Formal `Family, Given` listing order is useful to preserve as a `parseFirstName()` candidate, but it is too uncommon in self-entered website forms to justify a high-confidence greeting by itself.
+- Synthetic benchmark frequency is not production frequency. A shape appearing tens of thousands of times in a generated suite does not mean website users commonly submit that shape.
 - Single-token submissions stay usable as first names.
 - All-caps spelling cannot establish credential/suffix status.
 - Title and credential vocabularies overlap legitimate given names.

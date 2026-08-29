@@ -10,7 +10,7 @@ import { getFirstName } from "first-name-parser";
 
 getFirstName("Austin");                   // "Austin"
 getFirstName("Austin P. Smith");          // "Austin"
-getFirstName("Smith, Austin P.");         // "Austin"
+getFirstName("Smith, Austin P.");         // undefined
 getFirstName("Dr. Austin Smith Jr.");     // "Austin"
 getFirstName("Austin Smith, Jr.");        // "Austin"
 getFirstName("Austin Smith, MPH");        // "Austin"
@@ -39,7 +39,7 @@ The goal is to return a name only when it is safe to put directly into that gree
 Its core assumptions are explicit:
 
 - `First [Middle...] Last` is the default order for an unpunctuated US form value.
-- `Last, First [Middle...]` is recognized as listing order.
+- `Last, First [Middle...]` is recognized by `parseFirstName()` as a medium-confidence listing-order candidate, but `getFirstName()` abstains on that uncommon self-entered form shape.
 - `First Last, Jr.` remains given-name-first; a suffix after a comma does not automatically flip the name order.
 - A clear single submitted name is returned as the greeting name. A one-letter submission is treated as an initial. Ordinary two-letter alphabetic values such as `AJ`, `MJ`, `ML`, or `Li` remain usable because initials and short nicknames can be natural greeting names; capitalization alone does not lower confidence.
 - Leading initials are preserved by `parseFirstName()` but withheld by `getFirstName()`. `J. Austin Smith` must not silently become `Austin`, because that can turn a middle name into the greeting name.
@@ -75,7 +75,7 @@ Returns the parser candidate plus structural metadata. Unlike `getFirstName()`, 
 parseFirstName("Smith, Jordan P.");
 // {
 //   firstName: "Jordan",
-//   confidence: "high",
+//   confidence: "medium",
 //   format: "family-first"
 // }
 ```
@@ -97,9 +97,9 @@ Confidence describes how strongly the parser believes the candidate is safe as a
 | `Austin Smith Jr.` | `Austin` |
 | `Austin Smith, Jr.` | `Austin` |
 | `Austin Smith, MPH` | `Austin` |
-| `Smith, Austin P.` | `Austin` |
-| `Smith Jr., Austin P.` | `Austin` |
-| `Smith, Jr. Austin` | `Austin` |
+| `Smith, Austin P.` | `undefined` |
+| `Smith Jr., Austin P.` | `undefined` |
+| `Smith, Jr. Austin` | `undefined` |
 | `Dr.Austin Smith` | `Austin` |
 | `Mary-Jane Smith` | `Mary-Jane` |
 | `D'Andre Johnson` | `D'Andre` |

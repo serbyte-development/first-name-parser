@@ -19,7 +19,7 @@ export interface FirstNameParseResult {
  *
  * Assumptions are intentionally narrow:
  * - no comma: Given [Middle...] Family
- * - comma listing form: Family, Given [Middle...]
+ * - comma listing form: Family, Given [Middle...] is exposed as a medium-confidence candidate
  * - trailing comma segments made only of suffixes/credentials do not flip order
  * - a one-token name is itself the first name
  * - leading initials are preserved in parseFirstName() rather than silently
@@ -479,11 +479,12 @@ function parseCommaName(segments: string[]): FirstNameParseResult {
     }
 
     const firstName = tokens[0];
-    const confidence: FirstNameConfidence = isInitial(firstName)
-      ? "medium"
-      : "high";
-
-    return result(firstName, confidence, "family-first");
+    // Self-entered website forms overwhelmingly use given-first order. A comma
+    // can indicate Family, Given, but it can also introduce an unrecognized
+    // credential, role, or other metadata. Preserve the candidate for callers
+    // of parseFirstName(), but never promote an unrecognized comma structure to
+    // a greeting-safe result.
+    return result(firstName, "medium", "family-first");
   }
 
   // Nothing clearly name-like survived on the right. Returning the left-side

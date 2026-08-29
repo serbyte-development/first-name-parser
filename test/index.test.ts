@@ -24,19 +24,19 @@ const fixtures: Array<[string, string | undefined]> = [
   ["Austin Smith, CFA", "Austin"],
   ["Austin Smith, CEO", "Austin"],
   ["AUSTIN SMITH, MPH", "AUSTIN"],
-  ["Smith, Austin", "Austin"],
-  ["Smith, J.R.", "J.R."],
-  ["Smith, S.R.", "S.R."],
-  ["Smith, Austin P.", "Austin"],
-  ["Smith Jr., Austin P.", "Austin"],
-  ["Smith, Jr. Austin", "Austin"],
-  ["Smith, M.D. Austin", "Austin"],
-  ["Smith, III Austin", "Austin"],
-  ["Smith Jr., Junior", "Junior"],
-  ["Smith Jr., MA", "MA"],
-  ["Smith, Austin, Jr.", "Austin"],
-  ["Smith, Jr., Austin", "Austin"],
-  ["Smith, BSN, RN, Austin", "Austin"],
+  ["Smith, Austin", undefined],
+  ["Smith, J.R.", undefined],
+  ["Smith, S.R.", undefined],
+  ["Smith, Austin P.", undefined],
+  ["Smith Jr., Austin P.", undefined],
+  ["Smith, Jr. Austin", undefined],
+  ["Smith, M.D. Austin", undefined],
+  ["Smith, III Austin", undefined],
+  ["Smith Jr., Junior", undefined],
+  ["Smith Jr., MA", undefined],
+  ["Smith, Austin, Jr.", undefined],
+  ["Smith, Jr., Austin", undefined],
+  ["Smith, BSN, RN, Austin", undefined],
   ["Austin P., Smith", undefined],
   ["  Austin\tP.\nSmith  ", "Austin"],
   ["Mary-Jane Smith", "Mary-Jane"],
@@ -50,15 +50,15 @@ const fixtures: Array<[string, string | undefined]> = [
   ["Atty. Austin Smith", "Austin"],
   ["Insp. Austin Smith", "Austin"],
   ["Dr.Austin Smith", "Austin"],
-  ["Smith, Dr.Austin", "Austin"],
+  ["Smith, Dr.Austin", undefined],
   ["The Honorable Austin Smith", "Austin"],
   ["Do Smith", "Do"],
   ["Junior Smith", "Junior"],
-  ["Smith, Junior", "Junior"],
-  ["Smith, JUNIOR", "JUNIOR"],
-  ["Smith, Do", "Do"],
-  ["Smith, DO", "DO"],
-  ["Smith, BA", "BA"],
+  ["Smith, Junior", undefined],
+  ["Smith, JUNIOR", undefined],
+  ["Smith, Do", undefined],
+  ["Smith, DO", undefined],
+  ["Smith, BA", undefined],
   ["Smith, Miss", undefined],
   ["Justice Smith", undefined],
   ["Dr. Justice Smith", "Justice"],
@@ -67,7 +67,11 @@ const fixtures: Array<[string, string | undefined]> = [
   ["Miss Smith", undefined],
   ["John & Jane Smith", "John"],
   ["John and Jane Smith", "John"],
-  ["Smith, John & Jane", "John"],
+  ["Smith, John & Jane", undefined],
+  ["John Smith, AIA", undefined],
+  ["John Smith, FACP", undefined],
+  ["John Smith, Trustee", undefined],
+  ["De La Cruz, Juan", undefined],
   ["Mr. & Mrs. Smith", undefined],
   ["The Smith Family", undefined],
   ["Acme LLC", undefined],
@@ -158,9 +162,25 @@ test("leading initial is preserved and marked medium confidence", () => {
 test("comma listing form is recognized", () => {
   assert.deepEqual(parseFirstName("Smith, Austin P."), {
     firstName: "Austin",
-    confidence: "high",
+    confidence: "medium",
     format: "family-first",
   });
+
+  assert.equal(getFirstName("Smith, Austin P."), undefined);
+});
+
+test("unrecognized comma tails never become greeting-safe", () => {
+  for (const value of [
+    "John Smith, AIA",
+    "John Smith, FACP",
+    "John Smith, Trustee",
+  ] as const) {
+    assert.equal(parseFirstName(value).confidence, "medium");
+    assert.equal(getFirstName(value), undefined);
+  }
+
+  assert.equal(getFirstName("John Smith, Jr."), "John");
+  assert.equal(getFirstName("John Smith, MD"), "John");
 });
 
 test("household-only input is low confidence", () => {
@@ -202,7 +222,7 @@ test("multi-person input confidently keeps the first listed given name", () => {
 
   assert.deepEqual(parseFirstName("Smith, John & Jane"), {
     firstName: "John",
-    confidence: "high",
+    confidence: "medium",
     format: "family-first",
   });
 

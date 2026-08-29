@@ -4,6 +4,8 @@ The product benchmark asks whether the parser can choose a name that is safe to 
 
 Public name corpora still measure exact first/given-name extraction because that is the ground truth they provide. Those are regression tools, not the full product definition.
 
+Synthetic `Family, Given` cases are still useful for checking `parseFirstName()` candidate extraction, but the greeting helper intentionally withholds them at `medium` confidence because that format is rare in self-entered website forms and an unknown comma tail can also be a credential, role, or other metadata. Public greeting percentages that expect those synthetic candidates to be returned therefore are not product-accuracy metrics.
+
 ## Local benchmark assets
 
 Benchmark data and scripts live under `benchmarks/` so reruns do not depend on temporary files:

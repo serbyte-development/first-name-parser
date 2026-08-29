@@ -40,14 +40,16 @@ read_more:
 
 `parseCommaName()` distinguishes trailing metadata from listing order.
 
+The product context matters here: this parser is for people typing their own name into a website form. `Family, Given` is common in directories and stored/displayed records, but is not treated as a normal self-entry pattern. The parser preserves such a candidate for lower-level callers while the greeting helper abstains.
+
 - If every right-side segment consists of tail tokens, treat multi-token left side as given-first: `Austin Smith, Jr.`.
 - A one-token left side followed only by strong tail tokens is treated as mononym + suffix with `medium` confidence.
 - Ambiguous tail words such as `Junior`, `Do`, and `MA` block some suffix shortcuts unless punctuation gives stronger evidence.
 - Bare `BA` is also guarded because Census data contains `BA` as a first name.
 - `Austin P., Smith` is a targeted malformed-form recovery: left side ends in an initial, so use given-first with `medium` confidence.
-- Otherwise scan right-side segments as listing form, stripping leading strong suffix/credential tokens inside mixed segments. This recovers `Smith, Jr. Austin` and `Smith, M.D. Austin`.
+- Otherwise scan right-side segments as listing form, stripping leading strong suffix/credential tokens inside mixed segments. This preserves a candidate for `parseFirstName()`, but the listing-form candidate is `medium` confidence and is withheld by `getFirstName()`.
 - Dotted initial groups such as `J.R.` are not collapsed into the `Jr.` suffix meaning.
-- First surviving token becomes the family-first result. Multi-person right-side values still choose the first listed candidate without lowering confidence solely because multiple people are present.
+- First surviving token becomes the family-first candidate with `medium` confidence. Unknown comma tails therefore cannot become greeting-safe solely because they appear after a comma.
 - If nothing usable survives on the right, parse the left side and force `low` confidence.
 
 ## Vocabulary and ambiguity guards
