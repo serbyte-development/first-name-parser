@@ -7,24 +7,31 @@ export type FirstNameFormat =
   | "family-first";
 
 export interface FirstNameParseResult {
+  /** Raw parser candidate. Check confidence before using it directly. */
   firstName: string;
+  /** Structural confidence that firstName is safe as a greeting name. */
   confidence: FirstNameConfidence;
   format: FirstNameFormat;
 }
 
 /**
- * Extracts the likely given/first name from a US website "Full Name" field.
+ * Extracts a greeting-safe first name from a US website "Full Name" field.
  *
  * Assumptions are intentionally narrow:
  * - no comma: Given [Middle...] Family
  * - comma listing form: Family, Given [Middle...]
  * - trailing comma segments made only of suffixes/credentials do not flip order
  * - a one-token name is itself the first name
- * - leading initials are preserved rather than silently replaced by a middle name
+ * - leading initials are preserved in parseFirstName() rather than silently
+ *   replaced by a middle name
  *
  * This parser does not use a first-name/surname dictionary in production. For a
  * US website form, the field's expected order is stronger evidence than a
  * population-frequency guess, especially for names such as Jordan Taylor.
+ *
+ * getFirstName() only returns high-confidence results. parseFirstName() exposes
+ * lower-confidence candidates for callers that intentionally want a different
+ * fallback policy.
  */
 
 const TITLE_WORDS = new Set([
@@ -73,12 +80,39 @@ const TITLE_WORDS = new Set([
 const TITLE_PHRASES = [
   ["state", "representative"],
   ["state", "senator"],
+  ["state", "rep"],
+  ["the", "honorable"],
 ] as const;
 
 // Some honorific-looking words are also established US given names. Treating
 // them as titles without punctuation causes avoidable false positives. Justice
 // is especially common in Census first-name data.
-const AMBIGUOUS_TITLE_WORDS = new Set(["justice"]);
+const AMBIGUOUS_TITLE_WORDS = new Set(["judge", "justice"]);
+
+// These title-looking words also occur as US first names in the 2020 Census.
+// In a bare two-token value there is not enough structure to safely discard
+// the first token and promote the second token to given name.
+const TITLE_WORDS_ATTESTED_AS_GIVEN = new Set([
+  "mister",
+  "miss",
+  "doctor",
+  "rev",
+  "pastor",
+  "imam",
+  "judge",
+  "justice",
+  "hon",
+  "sir",
+  "dame",
+  "governor",
+  "mayor",
+  "captain",
+  "col",
+  "colonel",
+  "gen",
+  "general",
+  "lieutenant",
+]);
 
 const SUFFIXES = new Set([
   "jr",
@@ -132,6 +166,44 @@ const CREDENTIALS = new Set([
   "dvm",
   "od",
   "dc",
+  "mph",
+  "dpt",
+  "aprn",
+  "crna",
+  "lpc",
+  "lmhc",
+  "rph",
+  "pharmd",
+  "cfa",
+  "cfp",
+  "otr",
+  "otrl",
+  "pt",
+  "lpn",
+  "lvn",
+  "cna",
+  "rd",
+  "rdn",
+  "mpa",
+  "mpp",
+  "mfa",
+  "pmp",
+  "cissp",
+]);
+
+// Common role acronyms sometimes get pasted after a name as comma-separated
+// metadata. Keeping this list narrow avoids treating arbitrary uppercase names
+// as credentials.
+const POST_NOMINAL_ROLES = new Set([
+  "ceo",
+  "cfo",
+  "coo",
+  "cto",
+  "cio",
+  "cmo",
+  "vp",
+  "svp",
+  "evp",
 ]);
 
 // These are valid tail terms but are also attested US first names. When the
@@ -145,12 +217,85 @@ const AMBIGUOUS_TAIL_WORDS = new Set([
   "od",
   "edd",
   "ma",
+  "ba",
 ]);
 
 const CONJUNCTIONS = new Set(["and", "&"]);
 
-export function getFirstName(fullName: string): string {
-  return parseFirstName(fullName).firstName;
+const HOUSEHOLD_TAIL_WORDS = new Set(["family", "household"]);
+
+const ORGANIZATION_TAIL_WORDS = new Set([
+  "llc",
+  "pllc",
+  "llp",
+  "lp",
+  "inc",
+  "corporation",
+  "ltd",
+]);
+
+// Strong organization indicators observed in messy website form submissions.
+// Keep this vocabulary conservative: each term was checked against the 2020
+// Census first/last-name vocabularies used by this project and is absent from
+// both. This avoids broad words such as "company", "service", or "police"
+// that can also be real surnames.
+const ORGANIZATION_WORDS = new Set([
+  "auto",
+  "automotive",
+  "autobody",
+  "autoglass",
+  "motors",
+  "motorsports",
+  "collision",
+  "electric",
+  "electrical",
+  "contracting",
+  "repair",
+  "supply",
+  "services",
+  "systems",
+  "gmc",
+  "roofing",
+  "plumbing",
+  "hvac",
+  "realty",
+  "dental",
+  "clinic",
+  "spa",
+  "construction",
+  "builders",
+  "landscaping",
+  "landscape",
+  "tire",
+  "tires",
+  "garage",
+  "fabrication",
+  "machine",
+  "restaurant",
+  "studio",
+  "properties",
+  "management",
+  "solutions",
+  "enterprises",
+  "associates",
+  "shop",
+  "detail",
+  "pros",
+]);
+
+const PLACEHOLDER_VALUES = new Set(["anonymous"]);
+
+const NON_PERSON_LEADING_WORDS = new Set(["admin"]);
+
+const GLUED_TITLE =
+  /\b(mr|mrs|ms|mx|dr|prof|rev|fr|hon|capt|col|gen|lt|sgt|sen|rep|gov|atty)\.(?=\p{L})/giu;
+
+export function getFirstName(fullName: string): string | undefined {
+  const parsed = parseFirstName(fullName);
+
+  return parsed.confidence === "high" && parsed.firstName
+    ? parsed.firstName
+    : undefined;
 }
 
 export function parseFirstName(fullName: string): FirstNameParseResult {
@@ -158,6 +303,10 @@ export function parseFirstName(fullName: string): FirstNameParseResult {
 
   if (!normalized) {
     return result("", "low", "empty");
+  }
+
+  if (isClearlyNonNameValue(normalized)) {
+    return result("", "low", "given-first");
   }
 
   const commaSegments = normalized
@@ -175,10 +324,42 @@ export function parseFirstName(fullName: string): FirstNameParseResult {
 function parseGivenFirst(value: string): FirstNameParseResult {
   const rawTokens = tokenize(value);
 
+  if (!rawTokens.length) {
+    return result("", "low", "given-first");
+  }
+
   // A required full-name field still sometimes receives a mononym. Preserve it,
-  // even if the token happens to look like a title or suffix.
+  // even if the token happens to look like a title or suffix. Any token containing
+  // only one letter is structurally indistinguishable from an initial, even when
+  // malformed punctuation is attached, so do not mark it high.
   if (rawTokens.length === 1) {
-    return result(rawTokens[0], "high", "single");
+    const token = rawTokens[0];
+    const key = tokenKey(token);
+    const letterCount = [...token.matchAll(/\p{L}/gu)].length;
+    const unsafeSingleToken =
+      TITLE_WORDS.has(key) ||
+      isTailToken(token) ||
+      HOUSEHOLD_TAIL_WORDS.has(key) ||
+      ORGANIZATION_TAIL_WORDS.has(key) ||
+      ORGANIZATION_WORDS.has(key);
+
+    return result(
+      token,
+      unsafeSingleToken ? "low" : letterCount === 1 ? "medium" : "high",
+      "single",
+    );
+  }
+
+  if (
+    rawTokens.length === 2 &&
+    TITLE_WORDS_ATTESTED_AS_GIVEN.has(tokenKey(rawTokens[0])) &&
+    !rawTokens[0].includes(".")
+  ) {
+    return result(rawTokens[0], "low", "given-first");
+  }
+
+  if (isHouseholdLabel(rawTokens) || isOrganizationName(rawTokens)) {
+    return result("", "low", "given-first");
   }
 
   const stripped = stripLeadingTitles(rawTokens);
@@ -192,9 +373,18 @@ function parseGivenFirst(value: string): FirstNameParseResult {
     return result("", "low", "given-first");
   }
 
+  if (stripped.removedTitle && tokens.length === 1) {
+    return result("", "low", "given-first");
+  }
+
+  if (stripped.household && tokens.length === 1) {
+    return result("", "low", "given-first");
+  }
+
   const firstName = tokens[0];
-  const confidence: FirstNameConfidence =
-    isInitial(firstName) || stripped.household ? "medium" : "high";
+  const confidence: FirstNameConfidence = isInitial(firstName)
+    ? "medium"
+    : "high";
 
   return result(firstName, confidence, "given-first");
 }
@@ -260,16 +450,38 @@ function parseCommaName(segments: string[]): FirstNameParseResult {
   // Listing form. Skip standalone suffix/credential segments so inputs such as
   // "Smith, Jr., Austin" and "Smith, BSN, RN, Austin" can still recover Austin.
   for (const segmentTokens of rightSegments) {
-    const stripped = stripLeadingTitles(segmentTokens);
-    const tokens = stripped.tokens;
+    if (
+      segmentTokens.length === 1 &&
+      TITLE_WORDS_ATTESTED_AS_GIVEN.has(tokenKey(segmentTokens[0])) &&
+      !segmentTokens[0].includes(".")
+    ) {
+      return result(segmentTokens[0], "low", "family-first");
+    }
+
+    const leadingTailStripped = [...segmentTokens];
+
+    while (
+      leadingTailStripped.length > 0 &&
+      isStrongTailToken(leadingTailStripped[0])
+    ) {
+      leadingTailStripped.shift();
+    }
+
+    const stripped = stripLeadingTitles(leadingTailStripped);
+    const tokens = [...stripped.tokens];
+
+    while (tokens.length > 0 && isStrongTailToken(tokens[0])) {
+      tokens.shift();
+    }
 
     if (!tokens.length || tokens.every(isStrongTailToken)) {
       continue;
     }
 
     const firstName = tokens[0];
-    const confidence: FirstNameConfidence =
-      isInitial(firstName) || stripped.household ? "medium" : "high";
+    const confidence: FirstNameConfidence = isInitial(firstName)
+      ? "medium"
+      : "high";
 
     return result(firstName, confidence, "family-first");
   }
@@ -286,6 +498,7 @@ function parseCommaName(segments: string[]): FirstNameParseResult {
 function stripLeadingTitles(tokens: string[]): {
   tokens: string[];
   household: boolean;
+  removedTitle: boolean;
 } {
   const output = [...tokens];
   let removedTitle = false;
@@ -310,7 +523,7 @@ function stripLeadingTitles(tokens: string[]): {
       continue;
     }
 
-    if (isTitleToken(output[0])) {
+    if (isTitleToken(output[0]) || isStructuralAbbreviatedTitle(output[0])) {
       output.shift();
       removedTitle = true;
       continue;
@@ -328,12 +541,13 @@ function stripLeadingTitles(tokens: string[]): {
     break;
   }
 
-  return { tokens: output, household };
+  return { tokens: output, household, removedTitle };
 }
 
 function normalizeFullName(value: string): string {
   return String(value ?? "")
-    .normalize("NFKC")
+    .normalize("NFC")
+    .replace(GLUED_TITLE, "$1. ")
     .trim()
     .replace(/\s+/gu, " ")
     .replace(/\s*,\s*/gu, ", ");
@@ -357,6 +571,7 @@ function cleanToken(token: string): string {
 
 function tokenKey(token: string): string {
   return token
+    .normalize("NFKC")
     .toLocaleLowerCase("en-US")
     .replace(/[^\p{L}\p{N}]/gu, "");
 }
@@ -375,20 +590,41 @@ function isTitleToken(token: string): boolean {
   return true;
 }
 
+function isStructuralAbbreviatedTitle(token: string): boolean {
+  // Unknown leading abbreviations such as "Insp." and "Atty." are strong
+  // title signals. Single initials and dotted initial groups stay names.
+  return /^\p{L}{3,12}\.$/u.test(token);
+}
+
 function isConjunction(token: string): boolean {
   return token === "&" || CONJUNCTIONS.has(tokenKey(token));
 }
 
 function isSuffixToken(token: string): boolean {
-  return SUFFIXES.has(tokenKey(token));
+  const key = tokenKey(token);
+
+  if (!SUFFIXES.has(key)) {
+    return false;
+  }
+
+  // "J.R." and "S.R." are much more plausibly initials than Jr./Sr. suffixes.
+  if (/^(?:\p{L}\.){2,}$/u.test(token)) {
+    return false;
+  }
+
+  return true;
 }
 
 function isCredentialToken(token: string): boolean {
   return CREDENTIALS.has(tokenKey(token));
 }
 
+function isRoleTailToken(token: string): boolean {
+  return POST_NOMINAL_ROLES.has(tokenKey(token));
+}
+
 function isTailToken(token: string): boolean {
-  return isSuffixToken(token) || isCredentialToken(token);
+  return isSuffixToken(token) || isCredentialToken(token) || isRoleTailToken(token);
 }
 
 function isStrongTailToken(token: string): boolean {
@@ -410,6 +646,67 @@ function isStrongTailToken(token: string): boolean {
 
 function isInitial(token: string): boolean {
   return /^\p{L}\.?$/u.test(token);
+}
+
+function isClearlyNonNameValue(value: string): boolean {
+  if (!/\p{L}/u.test(value)) {
+    return true;
+  }
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value)) {
+    return true;
+  }
+
+  const rawTokens = value.split(/\s+/u).filter(Boolean);
+  const firstToken = rawTokens[0] ?? "";
+
+  if (/\d/u.test(firstToken)) {
+    return true;
+  }
+
+  if (rawTokens.length === 1 && firstToken.includes("&")) {
+    return true;
+  }
+
+  if (PLACEHOLDER_VALUES.has(tokenKey(value))) {
+    return true;
+  }
+
+  if (NON_PERSON_LEADING_WORDS.has(tokenKey(firstToken))) {
+    return true;
+  }
+
+  return /^(?:https?:\/\/|www\.)/iu.test(value);
+}
+
+function isHouseholdLabel(tokens: string[]): boolean {
+  return (
+    tokens.length > 1 &&
+    HOUSEHOLD_TAIL_WORDS.has(tokenKey(tokens[tokens.length - 1]))
+  );
+}
+
+function isOrganizationName(tokens: string[]): boolean {
+  if (tokens.length <= 1) {
+    return false;
+  }
+
+  if (ORGANIZATION_TAIL_WORDS.has(tokenKey(tokens[tokens.length - 1]))) {
+    return true;
+  }
+
+  if (tokens.some((token) => ORGANIZATION_WORDS.has(tokenKey(token)))) {
+    return true;
+  }
+
+  const keys = tokens.map(tokenKey);
+  const ofIndex = keys.indexOf("of");
+  return (
+    keys.includes("gift") && keys.includes("card") ||
+    keys.includes("kitchen") && keys.includes("bath") ||
+    ofIndex >= 1 && ofIndex <= 2 ||
+    keys.some((key, index) => key === "church" && keys[index + 1] === "of")
+  );
 }
 
 function result(

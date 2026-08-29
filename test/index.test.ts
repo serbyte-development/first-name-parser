@@ -3,45 +3,115 @@ import test from "node:test";
 
 import { getFirstName, parseFirstName } from "../src/index.js";
 
-const fixtures: Array<[string, string]> = [
+const fixtures: Array<[string, string | undefined]> = [
   ["Austin", "Austin"],
   ["Austin Smith", "Austin"],
   ["Austin P. Smith", "Austin"],
   ["Austin Paul Smith", "Austin"],
   ["Dr. Austin P. Smith", "Austin"],
   ["Dr Austin P Smith", "Austin"],
+  ["Dr. Smith", undefined],
+  ["Mr Smith", undefined],
   ["Austin Smith Jr.", "Austin"],
   ["Austin Smith, Jr.", "Austin"],
   ["Austin P. Smith, Jr.", "Austin"],
   ["Austin Smith, M.D.", "Austin"],
   ["Austin Smith, Jr., M.D.", "Austin"],
+  ["Austin Smith, MPH", "Austin"],
+  ["Austin Smith, DPT", "Austin"],
+  ["Austin Smith, APRN", "Austin"],
+  ["Austin Smith, CRNA", "Austin"],
+  ["Austin Smith, CFA", "Austin"],
+  ["Austin Smith, CEO", "Austin"],
+  ["AUSTIN SMITH, MPH", "AUSTIN"],
   ["Smith, Austin", "Austin"],
+  ["Smith, J.R.", "J.R."],
+  ["Smith, S.R.", "S.R."],
   ["Smith, Austin P.", "Austin"],
   ["Smith Jr., Austin P.", "Austin"],
+  ["Smith, Jr. Austin", "Austin"],
+  ["Smith, M.D. Austin", "Austin"],
+  ["Smith, III Austin", "Austin"],
   ["Smith Jr., Junior", "Junior"],
   ["Smith Jr., MA", "MA"],
   ["Smith, Austin, Jr.", "Austin"],
   ["Smith, Jr., Austin", "Austin"],
   ["Smith, BSN, RN, Austin", "Austin"],
-  ["Austin P., Smith", "Austin"],
+  ["Austin P., Smith", undefined],
   ["  Austin\tP.\nSmith  ", "Austin"],
   ["Mary-Jane Smith", "Mary-Jane"],
   ["D'Andre Johnson", "D'Andre"],
-  ["J. Austin Smith", "J."],
+  ["J. Austin Smith", undefined],
   ["Mr. and Mrs. Austin Smith", "Austin"],
   ["Mr & Mrs Austin Smith", "Austin"],
   ["State Senator Austin Smith", "Austin"],
+  ["State Rep. Austin Smith", "Austin"],
   ["Doctor Austin Smith", "Austin"],
+  ["Atty. Austin Smith", "Austin"],
+  ["Insp. Austin Smith", "Austin"],
+  ["Dr.Austin Smith", "Austin"],
+  ["Smith, Dr.Austin", "Austin"],
+  ["The Honorable Austin Smith", "Austin"],
   ["Do Smith", "Do"],
   ["Junior Smith", "Junior"],
   ["Smith, Junior", "Junior"],
   ["Smith, JUNIOR", "JUNIOR"],
   ["Smith, Do", "Do"],
   ["Smith, DO", "DO"],
-  ["Justice Smith", "Justice"],
+  ["Smith, BA", "BA"],
+  ["Smith, Miss", undefined],
+  ["Justice Smith", undefined],
   ["Dr. Justice Smith", "Justice"],
-  ["Miss", "Miss"],
-  ["", ""],
+  ["Judge Reinhold", undefined],
+  ["Mister Smith", undefined],
+  ["Miss Smith", undefined],
+  ["John & Jane Smith", "John"],
+  ["John and Jane Smith", "John"],
+  ["Smith, John & Jane", "John"],
+  ["Mr. & Mrs. Smith", undefined],
+  ["The Smith Family", undefined],
+  ["Acme LLC", undefined],
+  ["Example Auto Repair", undefined],
+  ["Sample Motors", undefined],
+  ["Example Kitchen And Bath", undefined],
+  ["Gift Card 1234", undefined],
+  ["Admin Example", undefined],
+  ["Example Motorsports", undefined],
+  ["Example Of Seattle", undefined],
+  ["Example Motors Of Seattle", undefined],
+  ["Example Church Of Seattle", undefined],
+  ["Austin Company", "Austin"],
+  ["Anonymous", undefined],
+  ["R&R", undefined],
+  ["USER123", undefined],
+  ["Amy Smith / Jim Smith", "Amy"],
+  ["john.smith@example.com", undefined],
+  ["https://example.com/john-smith", undefined],
+  ["12345", undefined],
+  ["Ａｕｓｔｉｎ Smith", "Ａｕｓｔｉｎ"],
+  ["Miss", undefined],
+  ["Dr.", undefined],
+  ["Jr.", undefined],
+  ["MD", undefined],
+  ["LLC", undefined],
+  ["Family", undefined],
+  ["Motors", undefined],
+  ["Hi", "Hi"],
+  ["AJ", "AJ"],
+  ["aj", "aj"],
+  ["MJ", "MJ"],
+  ["ML", "ML"],
+  ["jp", "jp"],
+  ["CJ", "CJ"],
+  ["AJ Smith", "AJ"],
+  ["CJ Smith", "CJ"],
+  ["LI WANG", "LI"],
+  ["J", undefined],
+  ["J-", undefined],
+  ["J/", undefined],
+  ["J!", undefined],
+  ["J..", undefined],
+  ["", undefined],
 ];
 
 for (const [fullName, expected] of fixtures) {
@@ -58,12 +128,31 @@ test("single name is high confidence", () => {
   });
 });
 
+test("single initial is withheld from greeting-safe helper", () => {
+  assert.deepEqual(parseFirstName("J"), {
+    firstName: "J",
+    confidence: "medium",
+    format: "single",
+  });
+
+  assert.equal(getFirstName("J"), undefined);
+});
+
+test("malformed one-letter mononyms stay below the greeting-safe threshold", () => {
+  for (const value of ["J-", "J/", "J!", "J.."] as const) {
+    assert.equal(parseFirstName(value).confidence, "medium");
+    assert.equal(getFirstName(value), undefined);
+  }
+});
+
 test("leading initial is preserved and marked medium confidence", () => {
   assert.deepEqual(parseFirstName("J. Austin Smith"), {
     firstName: "J.",
     confidence: "medium",
     format: "given-first",
   });
+
+  assert.equal(getFirstName("J. Austin Smith"), undefined);
 });
 
 test("comma listing form is recognized", () => {
@@ -71,5 +160,77 @@ test("comma listing form is recognized", () => {
     firstName: "Austin",
     confidence: "high",
     format: "family-first",
+  });
+});
+
+test("household-only input is low confidence", () => {
+  assert.deepEqual(parseFirstName("Mr. & Mrs. Smith"), {
+    firstName: "",
+    confidence: "low",
+    format: "given-first",
+  });
+});
+
+test("title plus surname does not promote surname to first name", () => {
+  assert.deepEqual(parseFirstName("Dr. Smith"), {
+    firstName: "",
+    confidence: "low",
+    format: "given-first",
+  });
+});
+
+test("title-looking given-name collision stays possible", () => {
+  assert.deepEqual(parseFirstName("Mister Smith"), {
+    firstName: "Mister",
+    confidence: "low",
+    format: "given-first",
+  });
+
+  assert.deepEqual(parseFirstName("Smith, Miss"), {
+    firstName: "Miss",
+    confidence: "low",
+    format: "family-first",
+  });
+});
+
+test("multi-person input confidently keeps the first listed given name", () => {
+  assert.deepEqual(parseFirstName("John & Jane Smith"), {
+    firstName: "John",
+    confidence: "high",
+    format: "given-first",
+  });
+
+  assert.deepEqual(parseFirstName("Smith, John & Jane"), {
+    firstName: "John",
+    confidence: "high",
+    format: "family-first",
+  });
+
+  assert.deepEqual(parseFirstName("Amy Smith / Jim Smith"), {
+    firstName: "Amy",
+    confidence: "high",
+    format: "given-first",
+  });
+
+  assert.deepEqual(parseFirstName("John Smith or Jane Smith"), {
+    firstName: "John",
+    confidence: "high",
+    format: "given-first",
+  });
+
+  assert.deepEqual(parseFirstName("J. Smith & Jane Smith"), {
+    firstName: "J.",
+    confidence: "medium",
+    format: "given-first",
+  });
+
+  assert.equal(getFirstName("J. Smith & Jane Smith"), undefined);
+});
+
+test("non-person form junk is low confidence", () => {
+  assert.deepEqual(parseFirstName("john.smith@example.com"), {
+    firstName: "",
+    confidence: "low",
+    format: "given-first",
   });
 });

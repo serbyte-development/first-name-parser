@@ -3,3 +3,7 @@ dist/
 coverage/
 *.log
 .DS_Store
+
+# Contains licensed/private client form submissions and review metadata.
+# Keep the directory local even if this project later becomes its own Git repo.
+benchmarks/private/

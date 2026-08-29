@@ -1,7 +1,7 @@
 {
   "name": "first-name-parser",
   "version": "0.1.0",
-  "description": "Best-effort first-name extraction from US full-name form fields.",
+  "description": "Greeting-safe first names from website full-name fields for customer follow-up.",
   "license": "MIT",
   "author": "Serbyte Development",
   "repository": {
@@ -27,16 +27,32 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean --minify",
+    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
     "test": "tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test && npm run build",
-    "prepack": "npm run build"
+    "typecheck:benchmarks": "tsc -p benchmarks/tsconfig.json",
+    "check": "npm run typecheck && npm run typecheck:benchmarks && npm test && npm run build",
+    "benchmark:probablepeople": "tsx benchmarks/public/eval-probablepeople.ts",
+    "benchmark:census": "tsx benchmarks/public/eval-census-vocabulary.ts",
+    "benchmark:census:generated": "tsx benchmarks/public/eval-census-generated.ts",
+    "benchmark:census:extract": "python3 benchmarks/public/extract-census-fixtures.py",
+    "benchmark:public": "npm run benchmark:probablepeople && npm run benchmark:census && npm run benchmark:census:generated",
+    "benchmark:private": "tsx benchmarks/private/benchmark.mjs",
+    "benchmark:private:two-letter": "tsx benchmarks/private/analyze-two-letter.mjs",
+    "prepare": "npm run build"
   },
   "keywords": [
     "first-name",
     "name-parser",
+    "first-name-extraction",
+    "first-name-parser",
+    "first-name-parser-typescript",
+    "first-name-parser-javascript",
+    "first-name-parser-node",
     "full-name",
+    "greeting",
+    "customer-follow-up",
+    "personalization",
     "typescript",
     "javascript",
     "forms"
