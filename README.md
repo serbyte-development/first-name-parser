@@ -3,7 +3,9 @@
 [![CI](https://github.com/Serbyte-Development/first-name-parser/actions/workflows/ci.yml/badge.svg)](https://github.com/Serbyte-Development/first-name-parser/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A zero-runtime-dependency TypeScript parser for choosing a greeting-safe first name from a website **Full Name** field, designed for customer and lead follow-up messages.
+Extract a greeting-safe first name from website **Full Name** form submissions.
+
+First Name Parser is a zero-runtime-dependency TypeScript library for customer and lead follow-up workflows where a website visitor enters their full name and your application needs a safe first name for messaging such as `Hey Austin, thanks for reaching out...`.
 
 ```ts
 import { getFirstName } from "first-name-parser";
@@ -22,10 +24,8 @@ getFirstName("Dr. Smith");                 // undefined
 
 ## Install
 
-Until an npm package is published, install directly from GitHub:
-
 ```sh
-npm install github:Serbyte-Development/first-name-parser
+npm install first-name-parser
 ```
 
 ## Why this parser exists
@@ -142,4 +142,4 @@ A private real-form benchmark can also be run with `npm run benchmark:private` w
 
 ## Attribution
 
-Developed & maintained by [Serbyte Development](https://www.serbyte.net/).
+Created and maintained by [Serbyte Development](https://www.serbyte.net/).
