@@ -1,7 +1,7 @@
 {
   "name": "first-name-parser",
   "version": "0.1.0",
-  "description": "Greeting-safe first names from website full-name fields for customer follow-up.",
+  "description": "Extract greeting-safe first names from website full-name form submissions. JavaScript and TypeScript with zero runtime dependencies.",
   "license": "MIT",
   "author": "Serbyte Development",
   "repository": {
@@ -41,20 +41,29 @@
     "prepare": "npm run build"
   },
   "keywords": [
+    "first name",
     "first-name",
+    "first name parser",
     "name-parser",
-    "first-name-extraction",
     "first-name-parser",
-    "first-name-parser-typescript",
-    "first-name-parser-javascript",
-    "first-name-parser-node",
+    "extract first name",
+    "first name extraction",
+    "full name",
     "full-name",
+    "full name parser",
+    "name parser",
+    "human name",
+    "human name parser",
+    "website form",
+    "form input",
+    "contact form",
+    "lead form",
     "greeting",
-    "customer-follow-up",
+    "customer follow-up",
     "personalization",
     "typescript",
     "javascript",
-    "forms"
+    "nodejs"
   ],
   "engines": {
     "node": ">=18"
