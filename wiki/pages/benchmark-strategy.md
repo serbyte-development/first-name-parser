@@ -4,9 +4,6 @@ paths:
   - BENCHMARKS.md
   - README.md
   - src/index.ts
-read_more:
-  - pages/parser-behavior.md
-  - pages/build-test-package.md
 ---
 
 # Benchmark Strategy

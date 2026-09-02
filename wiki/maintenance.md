@@ -6,7 +6,7 @@ Wiki pages and raw-source metadata are agent-authored. Generated indexes are der
 
 - `summary` is required for routable pages and should stay concise. `wiki clean` warns above 240 characters.
 - `paths` is optional and names repository files or directories the page helps explain.
-- `read_more` is optional and names useful wiki-root-relative pages to open next.
+- `read_more` is optional lateral routing for a specific next page that is not obvious from the generated index hierarchy; use it sparingly and omit it from most pages.
 - Update front matter when a page's knowledge scope changes.
 
 When creating a nested knowledge directory, add an `index.md` with only a `summary` in front matter. `wiki clean` generates and maintains the index body.

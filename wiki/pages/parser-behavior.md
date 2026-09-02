@@ -3,9 +3,6 @@ summary: "How normalization, token classification, comma handling, title strippi
 paths:
   - src/index.ts
   - test/index.test.ts
-read_more:
-  - pages/benchmark-strategy.md
-  - pages/build-test-package.md
 ---
 
 # Parser Behavior

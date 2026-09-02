@@ -4,5 +4,5 @@
 
 - [Project Overview](./pages/project-overview.md) — Orientation to the first-name-parser library, its customer follow-up greeting goal, public API, and project boundaries.
 - [Benchmark Strategy](./pages/benchmark-strategy.md) — Why benchmarks constrain parser heuristics, what the two benchmark corpora measure, and which design findings came from failures.
-- [Build, Test, Package](./pages/build-test-package.md) — Development commands, CI contract, TypeScript/build configuration, package exports, and generated dist ownership.
+- [Build, Test, Package](./pages/build-test-package.md) — Development commands, CI and release contracts, TypeScript/build configuration, package exports, and generated dist ownership.
 - [Parser Behavior](./pages/parser-behavior.md) — How normalization, token classification, comma handling, title stripping, ambiguity guards, confidence, and format detection work.

@@ -4,10 +4,6 @@ paths:
   - README.md
   - src/index.ts
   - package.json
-read_more:
-  - pages/parser-behavior.md
-  - pages/benchmark-strategy.md
-  - pages/build-test-package.md
 ---
 
 # Project Overview
